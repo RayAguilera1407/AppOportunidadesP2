@@ -14,4 +14,13 @@ object RetrofitInstance {
             .build()
             .create(ApiService::class.java) // Implementa la interfaz ApiService
     }
+
+    // Catálogo de eventos externos (archivo eventos.json en tu repo de GitHub)
+    val eventosApi: EventosApi by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://raw.githubusercontent.com/RayAguilera1407/AppOportunidadesP2/main/") // debe terminar en "/"
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(EventosApi::class.java)
+    }
 }

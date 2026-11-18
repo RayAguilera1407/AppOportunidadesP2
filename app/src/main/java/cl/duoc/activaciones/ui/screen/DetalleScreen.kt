@@ -62,6 +62,7 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
     var dialogoSeguimiento by remember { mutableStateOf(false) }
     var dialogoResultado by remember { mutableStateOf(false) }
     var confirmarEliminar by remember { mutableStateOf(false) }
+    var confirmarCierre by remember { mutableStateOf(false) }
     var seguimientoPorEliminar by remember { mutableStateOf<Seguimiento?>(null) }
 
     Scaffold(
@@ -97,6 +98,7 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                     Dato("Prioridad", o.prioridad.etiqueta)
                     Dato("Potencial comercial", o.potencial.etiqueta)
                     if (o.observaciones.isNotBlank()) Dato("Observaciones", o.observaciones)
+                    o.fechaCierre?.let { Dato("Cerrada el", it.aFecha()) }
                 }
             }
             item {
@@ -109,12 +111,15 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                     Dato("Costo", "$${o.costo}")
                 }
             }
-            // QR: la sección también aparece si hay un código QR guardado
-            if (o.referenciaGeografica.isNotBlank() || o.fotoPath != null || o.codigoQr.isNotBlank()) {
+            // La sección aparece si hay ubicación, foto, QR o documento guardado
+            if (o.referenciaGeografica.isNotBlank() || o.fotoPath != null ||
+                o.codigoQr.isNotBlank() || o.documentoPath != null
+            ) {
                 item {
                     Seccion("Evidencias") {
                         if (o.referenciaGeografica.isNotBlank()) Dato("Referencia geográfica", o.referenciaGeografica)
-                        if (o.codigoQr.isNotBlank()) Dato("Código QR", o.codigoQr) // QR
+                        if (o.codigoQr.isNotBlank()) Dato("Código QR", o.codigoQr)
+                        if (o.documentoPath != null) Dato("Documento", o.documentoNombre)
                         FotoEvidencia(o.fotoPath)
                     }
                 }
@@ -132,10 +137,34 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                 }
             }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { dialogoSeguimiento = true }) { Text("Registrar seguimiento") }
-                    if (o.estado == EstadoOportunidad.PARTICIPACION_CONFIRMADA) {
-                        OutlinedButton(onClick = { dialogoResultado = true }) { Text("Resultado") }
+                val cerrada = o.fechaCierre != null
+                // Se puede cerrar si fue descartada, o si confirmó participación y ya tiene resultado
+                val puedeCerrar = o.estado == EstadoOportunidad.DESCARTADA ||
+                        (o.estado == EstadoOportunidad.PARTICIPACION_CONFIRMADA && resultado != null)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { dialogoSeguimiento = true }, enabled = !cerrada) {
+                            Text("Registrar seguimiento")
+                        }
+                        if (o.estado == EstadoOportunidad.PARTICIPACION_CONFIRMADA) {
+                            OutlinedButton(onClick = { dialogoResultado = true }, enabled = !cerrada) {
+                                Text("Resultado")
+                            }
+                        }
+                    }
+                    if (cerrada) {
+                        Text("Oportunidad cerrada", color = MaterialTheme.colorScheme.secondary)
+                        OutlinedButton(onClick = vm::reabrir) { Text("Reabrir oportunidad") }
+                    } else {
+                        OutlinedButton(onClick = { confirmarCierre = true }, enabled = puedeCerrar) {
+                            Text("Cerrar oportunidad")
+                        }
+                        if (!puedeCerrar) {
+                            Text(
+                                "Para cerrar: descártala, o confirma la participación y registra el resultado.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
             }
@@ -158,7 +187,7 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                                 "${s.tipoAccion.etiqueta} · ${s.fechaHora.aFechaHora()}", fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.weight(1f)
                             )
-                            if (s.tipoAccion != TipoAccion.CAMBIO_ESTADO) {
+                            if (s.tipoAccion != TipoAccion.CAMBIO_ESTADO && s.tipoAccion != TipoAccion.CIERRE) {
                                 IconButton(onClick = { seguimientoPorEliminar = s }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Eliminar seguimiento", tint = MaterialTheme.colorScheme.error)
                                 }
@@ -187,6 +216,20 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                 confirmarEliminar = false
                 vm.eliminar(alTerminar = alVolver)
             }
+        )
+    }
+    if (confirmarCierre) {
+        AlertDialog(
+            onDismissRequest = { confirmarCierre = false },
+            title = { Text("Cerrar oportunidad") },
+            text = { Text("Se registrará el cierre en el historial y dejará de generar alertas. Puedes reabrirla después.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.cerrar()
+                    confirmarCierre = false
+                }) { Text("Cerrar") }
+            },
+            dismissButton = { TextButton(onClick = { confirmarCierre = false }) { Text("Cancelar") } }
         )
     }
     seguimientoPorEliminar?.let { s ->
@@ -225,7 +268,7 @@ private fun Dato(etiqueta: String, valor: String) {
 
 @Composable
 private fun DialogoSeguimiento(alCerrar: () -> Unit, alGuardar: (Seguimiento) -> Unit) {
-    val tipos = TipoAccion.values().filter { it != TipoAccion.CAMBIO_ESTADO }
+    val tipos = TipoAccion.values().filter { it != TipoAccion.CAMBIO_ESTADO && it != TipoAccion.CIERRE }
     var tipo by remember { mutableStateOf(TipoAccion.LLAMADA) }
     var resultado by remember { mutableStateOf("") }
     var proxima by remember { mutableStateOf("") }

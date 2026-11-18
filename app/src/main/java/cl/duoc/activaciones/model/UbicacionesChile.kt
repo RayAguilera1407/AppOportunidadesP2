@@ -88,6 +88,9 @@ val REGIONES_CHILE: Map<String, List<String>> = linkedMapOf(
 
 val REGIONES: List<String> = REGIONES_CHILE.keys.toList()
 
+/** Áreas disponibles en el registro de usuario. */
+val AREAS_USUARIO: List<String> = listOf("Comercial", "Marketing", "Comunicaciones", "Administración")
+
 fun comunasDe(region: String?): List<String> = REGIONES_CHILE[region].orEmpty()
 
 /** Para el registro de usuario: cobertura nacional o una región. */

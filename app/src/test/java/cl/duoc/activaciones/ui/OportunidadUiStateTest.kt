@@ -1,7 +1,8 @@
 package cl.duoc.activaciones.ui
 
 import cl.duoc.activaciones.model.EstadoOportunidad
-import cl.duoc.activaciones.viewmodel.OportunidadUiState
+import cl.duoc.activaciones.model.OportunidadErrores
+import cl.duoc.activaciones.model.OportunidadUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -17,7 +18,15 @@ class OportunidadUiStateTest {
 
     @Test
     fun `cualquier error de campo marca el formulario con errores`() {
-        assertTrue(OportunidadUiState(nombreError = "El nombre es obligatorio").tieneErrores)
-        assertTrue(OportunidadUiState(potencialError = "Selecciona el potencial").tieneErrores)
+        assertTrue(
+            OportunidadUiState(
+                errores = OportunidadErrores(nombre = "El nombre es obligatorio")
+            ).tieneErrores
+        )
+        assertTrue(
+            OportunidadUiState(
+                errores = OportunidadErrores(potencial = "Selecciona el potencial")
+            ).tieneErrores
+        )
     }
 }

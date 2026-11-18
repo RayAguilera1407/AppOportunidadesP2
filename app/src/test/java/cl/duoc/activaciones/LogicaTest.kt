@@ -113,4 +113,11 @@ class LogicaTest {
         )
         assertEquals(listOf(2L), filtrar(ops, Filtro(organizacionId = 2), ahora).map { it.id })
     }
+
+    @Test
+    fun `oportunidad cerrada no genera alertas`() {
+        val cerrada = op(1, EstadoOportunidad.PROPUESTA_ENVIADA, diasEstado = 10, enDias = 3).copy(fechaCierre = ahora)
+        val alertas = calcularAlertas(listOf(cerrada), emptyList(), ahora)
+        assertEquals(0, alertas.total)
+    }
 }

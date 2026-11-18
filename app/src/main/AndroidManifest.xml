@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.CAMERA" />
     <!-- Permiso necesario para hacer peticiones HTTP -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- ML Kit puede agregar estos permisos por su cuenta; la app funciona sin red -->

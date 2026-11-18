@@ -57,14 +57,39 @@ class OportunidadRepository(private val db: AppDatabase) {
         }
     }
 
-    /** Elimina la oportunidad junto con su historial, resultado y foto de evidencia. */
+    /** Cierra la oportunidad y deja el cierre en el historial. */
+    suspend fun cerrar(o: OportunidadEntity) = db.withTransaction {
+        val ahora = System.currentTimeMillis()
+        dao.actualizar(o.copy(fechaCierre = ahora))
+        seguimientos.insertar(
+            Seguimiento(
+                oportunidadId = o.id, tipoAccion = TipoAccion.CIERRE, fechaHora = ahora,
+                resultado = "Oportunidad cerrada (${o.estado.etiqueta})"
+            )
+        )
+    }
+
+    suspend fun reabrir(o: OportunidadEntity) = db.withTransaction {
+        dao.actualizar(o.copy(fechaCierre = null))
+        seguimientos.insertar(
+            Seguimiento(
+                oportunidadId = o.id, tipoAccion = TipoAccion.SEGUIMIENTO,
+                fechaHora = System.currentTimeMillis(), resultado = "Oportunidad reabierta"
+            )
+        )
+    }
+
+    /** Elimina la oportunidad junto con su historial, resultado, foto y documento. */
     suspend fun eliminar(o: OportunidadEntity) {
         db.withTransaction {
             seguimientos.eliminarDeOportunidad(o.id)
             resultados.eliminarDeOportunidad(o.id)
             dao.eliminar(o.id)
         }
-        o.fotoPath?.let { ruta -> withContext(Dispatchers.IO) { File(ruta).delete() } }
+        withContext(Dispatchers.IO) {
+            o.fotoPath?.let { File(it).delete() }
+            o.documentoPath?.let { File(it).delete() }
+        }
     }
 
     suspend fun cambiarEstado(o: OportunidadEntity, nuevo: EstadoOportunidad) {

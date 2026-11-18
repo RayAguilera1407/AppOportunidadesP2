@@ -38,5 +38,10 @@ data class OportunidadEntity(
     // Recursos nativos
     val referenciaGeografica: String = "",
     val fotoPath: String? = null,
-    val codigoQr: String = ""
+    val codigoQr: String = "",
+    // Documento adjunto
+    val documentoPath: String? = null,
+    val documentoNombre: String = "",
+    // Cierre
+    val fechaCierre: Long? = null
 )

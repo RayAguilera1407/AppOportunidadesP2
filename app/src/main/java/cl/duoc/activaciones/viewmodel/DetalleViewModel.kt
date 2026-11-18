@@ -89,4 +89,14 @@ class DetalleViewModel(
             alTerminar()
         }
     }
+
+    fun cerrar() {
+        val actual = oportunidad.value ?: return
+        viewModelScope.launch { oportunidadRepo.cerrar(actual) }
+    }
+
+    fun reabrir() {
+        val actual = oportunidad.value ?: return
+        viewModelScope.launch { oportunidadRepo.reabrir(actual) }
+    }
 }

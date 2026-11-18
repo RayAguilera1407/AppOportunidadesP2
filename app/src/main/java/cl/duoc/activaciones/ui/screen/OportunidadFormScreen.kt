@@ -1,7 +1,10 @@
 package cl.duoc.activaciones.ui.screen
 
 import android.Manifest
+import android.content.Context
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -57,7 +60,11 @@ import cl.duoc.activaciones.ui.theme.barraColores
 import cl.duoc.activaciones.util.guardarFotoEvidencia
 import cl.duoc.activaciones.util.obtenerUbicacion
 import cl.duoc.activaciones.viewmodel.OportunidadViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+
 
 /** Registrar (id <= 0) o modificar una oportunidad. Toda la lógica vive en OportunidadViewModel. */
 @Composable
@@ -112,6 +119,17 @@ fun OportunidadFormScreen(
     }
     val permisoCamara = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
         if (concedido) tomarFoto.launch(null) else vm.onMensajeRecurso("Permiso de cámara denegado")
+    }
+
+    // ----- Recurso nativo: documento -----
+    val elegirDocumento = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val r: Pair<String, String>? = copiarDocumentoEvidencia(context, uri)
+                if (r != null) vm.onDocumento(r.first, r.second)
+                else vm.onMensajeRecurso("No se pudo adjuntar el documento")
+            }
+        }
     }
 
     Scaffold(
@@ -213,6 +231,15 @@ fun OportunidadFormScreen(
                         style = MaterialTheme.typography.bodySmall
                     )
 
+                    OutlinedButton(
+                        onClick = { elegirDocumento.launch(arrayOf("*/*")) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Adjuntar documento") }
+                    Text(
+                        if (estado.documentoNombre.isBlank()) "Sin documento adjunto" else "Documento: ${estado.documentoNombre}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
                     estado.mensajeRecurso?.let {
                         Text(it, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodySmall)
                     }
@@ -255,3 +282,27 @@ fun FotoEvidencia(path: String?) {
         modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp))
     )
 }
+
+/**
+ * Copia el documento elegido al almacenamiento interno de la app.
+ * Devuelve Pair(rutaGuardada, nombreOriginal) o null si falla.
+ */
+private suspend fun copiarDocumentoEvidencia(context: Context, uri: Uri): Pair<String, String>? =
+    withContext(Dispatchers.IO) {
+        try {
+            val nombre = context.contentResolver
+                .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+                ?: "documento_${System.currentTimeMillis()}"
+
+            val carpeta = File(context.filesDir, "evidencias").apply { mkdirs() }
+            val destino = File(carpeta, "${System.currentTimeMillis()}_${nombre.replace("/", "_")}")
+
+            val entrada = context.contentResolver.openInputStream(uri) ?: return@withContext null
+            entrada.use { input -> destino.outputStream().use { input.copyTo(it) } }
+
+            Pair(destino.absolutePath, nombre)
+        } catch (e: Exception) {
+            null
+        }
+    }

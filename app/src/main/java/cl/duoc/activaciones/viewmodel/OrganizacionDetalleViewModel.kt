@@ -52,4 +52,12 @@ class OrganizacionDetalleViewModel(
     fun eliminarContacto(c: Contacto) {
         viewModelScope.launch { repo.eliminarContacto(c.id) }
     }
+
+    /** Validación del correo del contacto: vacío es válido (es opcional), si tiene texto debe ser correcto. */
+    fun errorCorreo(correo: String): String? =
+        if (correo.isNotBlank() && !REGEX_CORREO.matches(correo.trim())) "Correo inválido" else null
+
+    private companion object {
+        val REGEX_CORREO = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    }
 }
