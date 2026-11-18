@@ -43,7 +43,6 @@ import cl.duoc.activaciones.model.ESTADOS_CONTACTO
 import cl.duoc.activaciones.model.MEDIOS_CONTACTO
 import cl.duoc.activaciones.model.REGIONES
 import cl.duoc.activaciones.model.TIPOS_ORGANIZACION
-import cl.duoc.activaciones.model.correoValido
 import cl.duoc.activaciones.util.aFecha
 import cl.duoc.activaciones.model.comunasDe
 import cl.duoc.activaciones.ui.components.Campo
@@ -235,7 +234,7 @@ fun OrganizacionDetalleScreen(id: Long, alVolver: () -> Unit, alAbrirOportunidad
         var medio by remember { mutableStateOf(MEDIOS_CONTACTO.first()) }
         var estadoContacto by remember { mutableStateOf(ESTADOS_CONTACTO.first()) }
         var observaciones by remember { mutableStateOf("") }
-        val errorCorreo = if (correo.isNotBlank() && !correoValido(correo)) "Correo inválido" else null
+        val errorCorreo = vm.errorCorreo(correo)
         AlertDialog(
             onDismissRequest = { dialogo = false },
             title = { Text("Nuevo contacto") },

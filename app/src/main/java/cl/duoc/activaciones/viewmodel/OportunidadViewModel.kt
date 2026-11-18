@@ -15,7 +15,6 @@ import cl.duoc.activaciones.model.Potencial
 import cl.duoc.activaciones.model.Prioridad
 import cl.duoc.activaciones.model.TipoEvento
 import cl.duoc.activaciones.model.Usuario
-import cl.duoc.activaciones.model.errorEnteroPositivo
 import cl.duoc.activaciones.model.filtrar
 import cl.duoc.activaciones.model.visibles
 import cl.duoc.activaciones.util.Sesion
@@ -111,6 +110,7 @@ class OportunidadViewModel(
                 condiciones = o.condiciones, costo = if (o.costo > 0) o.costo.toString() else "",
                 referenciaGeografica = o.referenciaGeografica, fotoPath = o.fotoPath,
                 codigoQr = o.codigoQr,
+                documentoPath = o.documentoPath, documentoNombre = o.documentoNombre,
                 esEdicion = true
             )
         }
@@ -157,7 +157,19 @@ class OportunidadViewModel(
     // Se llama cuando vuelve el resultado del escáner QR
     fun onQr(contenido: String) = _uiState.update { it.copy(codigoQr = contenido, mensajeRecurso = "Código QR registrado") }
 
+    // Se llama cuando el usuario elige un documento para adjuntar
+    fun onDocumento(path: String, nombre: String) = _uiState.update {
+        it.copy(documentoPath = path, documentoNombre = nombre, mensajeRecurso = "Documento adjuntado")
+    }
+
     fun onMensajeRecurso(mensaje: String) = _uiState.update { it.copy(mensajeRecurso = mensaje) }
+
+    /** Campo numérico opcional: vacío es válido; si tiene texto debe ser un entero >= 0. */
+    private fun errorEnteroPositivo(texto: String): String? = when {
+        texto.isBlank() -> null
+        texto.toIntOrNull()?.let { it >= 0 } != true -> "Debe ser un número entero positivo"
+        else -> null
+    }
 
     /** Valida en el ViewModel; la vista solo muestra los errores que quedan en el UiState. */
     fun guardar() {
@@ -230,7 +242,10 @@ class OportunidadViewModel(
                 costo = s.costo.toIntOrNull() ?: 0,
                 referenciaGeografica = s.referenciaGeografica,
                 fotoPath = s.fotoPath,
-                codigoQr = s.codigoQr
+                codigoQr = s.codigoQr,
+                documentoPath = s.documentoPath,
+                documentoNombre = s.documentoNombre,
+                fechaCierre = base?.fechaCierre // conserva el cierre al editar
             )
             oportunidadRepo.guardar(entidad)
             _uiState.update { it.copy(guardando = false, guardadoExitosamente = true) }

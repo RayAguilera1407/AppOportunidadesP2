@@ -31,6 +31,9 @@ import cl.duoc.activaciones.ui.screen.RegistroScreen
 import cl.duoc.activaciones.ui.screen.ResumenScreen
 import cl.duoc.activaciones.viewmodel.PostViewModel
 import cl.duoc.activaciones.viewmodel.UsuarioViewModel
+import cl.duoc.activaciones.ui.screen.EventosExternosScreen
+import cl.duoc.activaciones.ui.screen.SupervisionScreen
+
 
 object Rutas {
     const val LOGIN = "login"
@@ -46,6 +49,8 @@ object Rutas {
     const val RESUMEN = "resumen"
     const val QR = "qr_scanner"
     const val POSTS = "posts"
+    const val SUPERVISION = "supervision"
+    const val EVENTOS = "eventos_externos"
 
     fun form(id: Long = 0) = "oportunidad_form/$id"
     fun detalle(id: Long) = "oportunidad_detalle/$id"
@@ -111,7 +116,9 @@ fun AppNavigation() {
                 alAlertas = { nav.navigate(Rutas.ALERTAS) },
                 alOrganizaciones = { nav.navigate(Rutas.ORGANIZACIONES) },
                 alPerfil = { nav.navigate(Rutas.PERFIL) },
-                alPosts = { nav.navigate(Rutas.POSTS) }
+                alPosts = { nav.navigate(Rutas.POSTS) },
+                alSupervision = { nav.navigate(Rutas.SUPERVISION) },
+                alEventos = { nav.navigate(Rutas.EVENTOS) }
             )
         }
         composable(Rutas.LISTA) {
@@ -167,6 +174,10 @@ fun AppNavigation() {
                 alSalir = { nav.navigate(Rutas.LOGIN) { popUpTo(nav.graph.id) { inclusive = true } } }
             )
         }
+
+        composable(Rutas.SUPERVISION) { SupervisionScreen(alVolver = { nav.popBackStack() }) }
+        composable(Rutas.EVENTOS) { EventosExternosScreen(alVolver = { nav.popBackStack() }) }
+
         // Guía 14: consumo de API REST con Retrofit
         composable(Rutas.POSTS) {
             val postViewModel: PostViewModel = viewModel()

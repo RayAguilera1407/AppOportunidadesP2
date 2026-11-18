@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.duoc.activaciones.model.Perfil
 import cl.duoc.activaciones.ui.components.app
 import cl.duoc.activaciones.ui.components.vmFactory
 import cl.duoc.activaciones.ui.theme.GrisBorde
@@ -43,7 +45,9 @@ fun MenuScreen(
     alAlertas: () -> Unit,
     alOrganizaciones: () -> Unit,
     alPerfil: () -> Unit,
-    alPosts: () -> Unit
+    alPosts: () -> Unit,
+    alSupervision: () -> Unit,
+    alEventos: () -> Unit
 ) {
     val app = app()
     val vm: PrincipalViewModel = viewModel(
@@ -74,6 +78,11 @@ fun MenuScreen(
         OpcionMenu("Oportunidades", "Registrar, consultar y editar", Icons.Default.List, MaterialTheme.colorScheme.primary, alOportunidades)
         OpcionMenu("Alertas", "${alertas.total} pendientes", Icons.Default.Notifications, MaterialTheme.colorScheme.secondary, alAlertas)
         OpcionMenu("Organizaciones", "Empresas, instituciones y contactos", Icons.Default.Home, MaterialTheme.colorScheme.primary, alOrganizaciones)
+        // Solo el supervisor ve la supervisión general
+        if (usuario?.perfil == Perfil.SUPERVISOR) {
+            OpcionMenu("Supervisión", "Resumen por estado, prioridad y responsable", Icons.Default.Info, MaterialTheme.colorScheme.secondary, alSupervision)
+        }
+        OpcionMenu("Catálogo de eventos", "Consulta de eventos externos (API REST)", Icons.Default.Search, MaterialTheme.colorScheme.primary, alEventos)
         OpcionMenu("Mi perfil", "Datos de la cuenta y sesión", Icons.Default.Person, MaterialTheme.colorScheme.secondary, alPerfil)
         OpcionMenu("Posts (API REST)", "Consumo de API con Retrofit", Icons.Default.Info, MaterialTheme.colorScheme.primary, alPosts)
     }

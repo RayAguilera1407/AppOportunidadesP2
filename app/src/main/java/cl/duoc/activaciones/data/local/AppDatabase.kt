@@ -49,10 +49,19 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+/** v5 -> v6: cierre de oportunidad y documento adjunto. */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE oportunidad ADD COLUMN fechaCierre INTEGER")
+        db.execSQL("ALTER TABLE oportunidad ADD COLUMN documentoPath TEXT")
+        db.execSQL("ALTER TABLE oportunidad ADD COLUMN documentoNombre TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 @Database(
     entities = [Usuario::class, Organizacion::class, Contacto::class, OportunidadEntity::class,
         Seguimiento::class, ResultadoActivacion::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -65,7 +74,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         fun crear(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "activaciones.db")
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
     }
 }

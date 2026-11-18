@@ -33,8 +33,10 @@ fun filtrar(
             cumplePeriodo(o.fechaInicio, f.periodo, ahora)
 }
 
-fun calcularAlertas(ops: List<OportunidadEntity>, segs: List<Seguimiento>, ahora: Long): Alertas {
+fun calcularAlertas(todas: List<OportunidadEntity>, segs: List<Seguimiento>, ahora: Long): Alertas {
+    val ops = todas.filter { it.fechaCierre == null }
     val porOp = segs.groupBy { it.oportunidadId }
+
     val cerradas = setOf(EstadoOportunidad.DESCARTADA, EstadoOportunidad.PARTICIPACION_CONFIRMADA)
 
     val proximos = ops.filter {

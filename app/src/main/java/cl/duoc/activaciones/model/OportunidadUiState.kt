@@ -24,6 +24,8 @@ data class OportunidadUiState(
     // Recursos nativos
     val referenciaGeografica: String = "",
     val fotoPath: String? = null,
+    val documentoPath: String? = null,
+    val documentoNombre: String = "",
     val codigoQr: String = "",
     val mensajeRecurso: String? = null,
     // Errores (objeto aparte, igual que UsuarioUiState)

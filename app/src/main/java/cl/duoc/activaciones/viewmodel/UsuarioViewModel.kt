@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import cl.duoc.activaciones.data.repository.Repositorio
 import cl.duoc.activaciones.model.Perfil
 import cl.duoc.activaciones.model.Usuario
+import cl.duoc.activaciones.model.UsuarioErrores
 import cl.duoc.activaciones.model.UsuarioUiState
-import cl.duoc.activaciones.model.validarRegistro
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,9 +45,46 @@ class UsuarioViewModel(private val repo: Repositorio) : ViewModel() {
         _estado.value = UsuarioUiState()
     }
 
+    // ---------- Validaciones ----------
+
+    private fun errorNombre(nombre: String): String? = when {
+        nombre.isBlank() -> "El nombre es obligatorio"
+        nombre.trim().length < 3 -> "Debe tener al menos 3 caracteres"
+        nombre.any { it.isDigit() } -> "El nombre no puede contener números"
+        else -> null
+    }
+
+    private fun errorCorreo(correo: String): String? = when {
+        correo.isBlank() -> "El correo es obligatorio"
+        !REGEX_CORREO.matches(correo.trim()) -> "Correo inválido (ej: nombre@dominio.cl)"
+        else -> null
+    }
+
+    private fun errorClave(clave: String): String? = when {
+        clave.length < 6 -> "Debe tener al menos 6 caracteres"
+        clave.none { it.isLetter() } || clave.none { it.isDigit() } -> "Debe incluir letras y números"
+        else -> null
+    }
+
+    private fun errorDireccion(direccion: String): String? = when {
+        direccion.isBlank() -> "La dirección es obligatoria"
+        direccion.trim().length < 5 -> "Debe tener al menos 5 caracteres"
+        else -> null
+    }
+
     /** Valida todo el formulario, deja los errores en el estado y devuelve true si es válido. */
     fun validarFormulario(): Boolean {
-        val errores = validarRegistro(_estado.value)
+        val s = _estado.value
+        val errores = UsuarioErrores(
+            nombre = errorNombre(s.nombre),
+            correo = errorCorreo(s.correo),
+            clave = errorClave(s.clave),
+            confirmarClave = if (s.confirmarClave != s.clave) "Las contraseñas no coinciden" else null,
+            direccion = errorDireccion(s.direccion),
+            area = if (s.area == null) "Selecciona tu área" else null,
+            zona = if (s.zona == null) "Selecciona tu zona o sucursal" else null,
+            terminos = if (!s.aceptaTerminos) "Debes aceptar los términos para continuar" else null
+        )
         _estado.update { it.copy(errores = errores) }
         return !errores.hayErrores
     }
@@ -87,5 +124,9 @@ class UsuarioViewModel(private val repo: Repositorio) : ViewModel() {
                 }
             }
         }
+    }
+
+    private companion object {
+        val REGEX_CORREO = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
     }
 }
