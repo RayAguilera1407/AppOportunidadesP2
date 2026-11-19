@@ -1,5 +1,6 @@
 package cl.duoc.activaciones.ui.screen
 
+import cl.duoc.activaciones.model.OportunidadFuentes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -58,7 +59,9 @@ fun ListaOportunidadesScreen(
 ) {
     val app = app()
     val vm: OportunidadViewModel = viewModel(
-        factory = vmFactory { OportunidadViewModel(app.oportunidadRepo, app.repo, app.sesion) }
+        factory = vmFactory {
+            OportunidadViewModel(OportunidadFuentes(app.oportunidadRepo, app.repo, app.sesion))
+        }
     )
     val lista by vm.lista.collectAsState()
     val filtro by vm.filtro.collectAsState()

@@ -1,5 +1,6 @@
 package cl.duoc.activaciones.ui.screen
 
+import cl.duoc.activaciones.model.OportunidadFuentes
 import android.Manifest
 import android.content.Context
 import android.graphics.BitmapFactory
@@ -79,7 +80,9 @@ fun OportunidadFormScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val vm: OportunidadViewModel = viewModel(
-        factory = vmFactory { OportunidadViewModel(app.oportunidadRepo, app.repo, app.sesion) }
+        factory = vmFactory {
+            OportunidadViewModel(OportunidadFuentes(app.oportunidadRepo, app.repo, app.sesion))
+        }
     )
     val estado by vm.uiState.collectAsState()
     val organizaciones by vm.organizaciones.collectAsState()

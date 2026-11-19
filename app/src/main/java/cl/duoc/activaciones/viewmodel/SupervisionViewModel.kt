@@ -6,21 +6,11 @@ import cl.duoc.activaciones.data.repository.OportunidadRepository
 import cl.duoc.activaciones.data.repository.Repositorio
 import cl.duoc.activaciones.model.EstadoOportunidad
 import cl.duoc.activaciones.model.Prioridad
+import cl.duoc.activaciones.model.ResumenSupervision
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-
-data class ResumenSupervision(
-    val total: Int = 0,
-    val cerradas: Int = 0,
-    val porEstado: List<Pair<String, Int>> = emptyList(),
-    val porPrioridad: List<Pair<String, Int>> = emptyList(),
-    val porResponsable: List<Pair<String, Int>> = emptyList(),
-    val participacionesConfirmadas: Int = 0,
-    val publicoConfirmado: Int = 0,
-    val costoConfirmado: Int = 0
-)
 
 /** Seguimiento general del supervisor: conteos por estado, prioridad y responsable. */
 class SupervisionViewModel(

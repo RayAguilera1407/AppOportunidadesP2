@@ -9,6 +9,7 @@ import cl.duoc.activaciones.model.Contacto
 import cl.duoc.activaciones.model.EstadoOportunidad
 import cl.duoc.activaciones.model.Filtro
 import cl.duoc.activaciones.model.OportunidadErrores
+import cl.duoc.activaciones.model.OportunidadFuentes
 import cl.duoc.activaciones.model.OportunidadUiState
 import cl.duoc.activaciones.model.Organizacion
 import cl.duoc.activaciones.model.Perfil
@@ -41,10 +42,19 @@ import java.util.Locale
 /** ViewModel del módulo de oportunidades: lista (con filtros) y formulario crear/editar. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class OportunidadViewModel(
-    private val oportunidadRepo: OportunidadRepository,
-    private val repo: Repositorio,
-    private val sesion: Sesion
+    fuentes: OportunidadFuentes
 ) : ViewModel() {
+
+    private val oportunidadRepo: OportunidadRepository = fuentes.oportunidadRepo
+    private val repo: Repositorio = fuentes.repo
+    private val sesion: Sesion = fuentes.sesion
+
+    // Mantiene la llamada anterior: OportunidadViewModel(app.oportunidadRepo, app.repo, app.sesion)
+    constructor(
+        oportunidadRepo: OportunidadRepository,
+        repo: Repositorio,
+        sesion: Sesion
+    ) : this(OportunidadFuentes(oportunidadRepo, repo, sesion))
 
     private fun <T> Flow<T>.estado(scope: CoroutineScope, inicial: T): StateFlow<T> =
         stateIn(scope, SharingStarted.WhileSubscribed(5000), inicial)

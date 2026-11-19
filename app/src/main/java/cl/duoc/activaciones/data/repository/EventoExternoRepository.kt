@@ -3,8 +3,7 @@ package cl.duoc.activaciones.data.repository
 import cl.duoc.activaciones.data.remote.EventosApi
 import cl.duoc.activaciones.data.remote.RetrofitInstance
 import cl.duoc.activaciones.model.EventoExterno
-
-data class ResultadoEventos(val eventos: List<EventoExterno>, val desdeServidor: Boolean)
+import cl.duoc.activaciones.model.ResultadoEventos
 
 /** Consulta el catálogo con Retrofit; si falla, usa datos ficticios locales. */
 class EventoExternoRepository(private val api: EventosApi = RetrofitInstance.eventosApi) {
