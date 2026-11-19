@@ -83,6 +83,7 @@ fun OportunidadFormScreen(
     )
     val estado by vm.uiState.collectAsState()
     val organizaciones by vm.organizaciones.collectAsState()
+    val contactos by vm.contactos.collectAsState()
     val usuario by vm.usuario.collectAsState()
     val usuarios by vm.usuarios.collectAsState()
     val e = estado.errores
@@ -165,39 +166,49 @@ fun OportunidadFormScreen(
                 "Estado de gestión *", EstadoOportunidad.values().toList(), estado.estado, { it.etiqueta },
                 onSeleccion = vm::onEstado
             )
-            Campo("Observaciones", estado.observaciones, unaLinea = false, onCambio = vm::onObservaciones)
+            Campo("Observaciones *", estado.observaciones, unaLinea = false, error = e.observaciones, onCambio = vm::onObservaciones)
             CampoSelector(
-                "Organización (opcional)", listOf<Long?>(null) + organizaciones.map { it.id }, estado.organizacionId,
-                { sel -> organizaciones.firstOrNull { it.id == sel }?.nombre ?: "Sin organización" },
-                onSeleccion = vm::onOrganizacion
+                "Organización *", organizaciones.map { it.id }, estado.organizacionId,
+                { sel -> organizaciones.firstOrNull { it.id == sel }?.nombre ?: "" },
+                error = e.organizacion, onSeleccion = vm::onOrganizacion
             )
+            // Contacto de la organización seleccionada
+            if (estado.organizacionId != null) {
+                CampoSelector(
+                    "Contacto de la organización *",
+                    contactos.map { it.id }, estado.contactoId,
+                    { sel -> contactos.firstOrNull { it.id == sel }?.let { "${it.nombre} · ${it.cargo}" } ?: "" },
+                    error = e.contacto, onSeleccion = vm::onContacto
+                )
+            }
             // Asignar responsable interno (solo supervisor)
             if (usuario?.perfil == Perfil.SUPERVISOR) {
                 val ejecutivos = usuarios.filter { it.perfil == Perfil.EJECUTIVO }
                 CampoSelector(
-                    "Responsable interno", ejecutivos.map { it.id }, estado.responsableId,
-                    { sel -> usuarios.firstOrNull { it.id == sel }?.nombre ?: "Sin asignar" },
-                    onSeleccion = vm::onResponsable
+                    "Responsable interno *", ejecutivos.map { it.id }, estado.responsableId,
+                    { sel -> usuarios.firstOrNull { it.id == sel }?.nombre ?: "" },
+                    error = e.responsable, onSeleccion = vm::onResponsable
                 )
             }
 
-            Titulo("Evento asociado (opcional)")
-            Campo("Fecha inicio (dd/MM/aaaa)", estado.fechaInicio, error = e.fecha, onCambio = vm::onFechaInicio)
-            Campo("Fecha término (dd/MM/aaaa)", estado.fechaTermino, onCambio = vm::onFechaTermino)
-            Campo("Horario", estado.horario, onCambio = vm::onHorario)
+            Titulo("Evento asociado")
+            Campo("Fecha inicio (dd/MM/aaaa) *", estado.fechaInicio, error = e.fechaInicio, onCambio = vm::onFechaInicio)
+            Campo("Fecha término (dd/MM/aaaa) *", estado.fechaTermino, error = e.fechaTermino, onCambio = vm::onFechaTermino)
+            Campo("Horario *", estado.horario, error = e.horario, onCambio = vm::onHorario)
             CampoSelector(
-                "Región", REGIONES, estado.region.ifBlank { null }, { it },
-                onSeleccion = vm::onRegion
+                "Región *", REGIONES, estado.region.ifBlank { null }, { it },
+                error = e.region, onSeleccion = vm::onRegion
             )
             CampoSelector(
-                "Comuna", comunasDe(estado.region), estado.comuna.ifBlank { null }, { it },
+                "Comuna *", comunasDe(estado.region), estado.comuna.ifBlank { null }, { it },
                 error = e.comuna,
                 habilitado = estado.region.isNotBlank(),
                 onSeleccion = vm::onComuna
             )
-            Campo("Público esperado", estado.publico, numerico = true, error = e.publico, onCambio = vm::onPublico)
-            Campo("Condiciones de participación", estado.condiciones, unaLinea = false, onCambio = vm::onCondiciones)
-            Campo("Costo asociado", estado.costo, numerico = true, error = e.costo, onCambio = vm::onCosto)
+            Campo("Público esperado *", estado.publico, numerico = true, error = e.publico, onCambio = vm::onPublico)
+            Campo("Espacio o stand asignado *", estado.espacio, error = e.espacio, onCambio = vm::onEspacio)
+            Campo("Condiciones de participación *", estado.condiciones, unaLinea = false, error = e.condiciones, onCambio = vm::onCondiciones)
+            Campo("Costo asociado *", estado.costo, numerico = true, error = e.costo, onCambio = vm::onCosto)
 
             Titulo("Recursos del dispositivo")
             Card(Modifier.fillMaxWidth()) {

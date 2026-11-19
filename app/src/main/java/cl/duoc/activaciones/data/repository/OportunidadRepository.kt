@@ -31,6 +31,7 @@ class OportunidadRepository(private val db: AppDatabase) {
     suspend fun guardarResultado(r: ResultadoActivacion) = resultados.guardar(r)
 
     /** Inserta o actualiza. Si el estado cambió, deja el registro en el historial. */
+    /** Inserta o actualiza. Deja en el historial los cambios de estado, prioridad y responsable. */
     suspend fun guardar(o: OportunidadEntity): Long = db.withTransaction {
         val ahora = System.currentTimeMillis()
         if (o.id == 0L) {
@@ -45,13 +46,25 @@ class OportunidadRepository(private val db: AppDatabase) {
         } else {
             val anterior = dao.porIdUnaVez(o.id)
             dao.actualizar(o)
-            if (anterior != null && anterior.estado != o.estado) {
-                seguimientos.insertar(
+            if (anterior != null) {
+                suspend fun registrar(texto: String) = seguimientos.insertar(
                     Seguimiento(
-                        oportunidadId = o.id, tipoAccion = TipoAccion.CAMBIO_ESTADO, fechaHora = ahora,
-                        resultado = "${anterior.estado.etiqueta} → ${o.estado.etiqueta}"
+                        oportunidadId = o.id, tipoAccion = TipoAccion.CAMBIO_ESTADO,
+                        fechaHora = ahora, resultado = texto
                     )
                 )
+                if (anterior.estado != o.estado) {
+                    registrar("${anterior.estado.etiqueta} → ${o.estado.etiqueta}")
+                }
+                if (anterior.prioridad != o.prioridad) {
+                    registrar("Prioridad: ${anterior.prioridad.etiqueta} → ${o.prioridad.etiqueta}")
+                }
+                if (anterior.responsableId != o.responsableId) {
+                    val usuarios = db.usuarioDao()
+                    val de = usuarios.porIdUnaVez(anterior.responsableId)?.nombre ?: "Sin asignar"
+                    val a = usuarios.porIdUnaVez(o.responsableId)?.nombre ?: "Sin asignar"
+                    registrar("Responsable: $de → $a")
+                }
             }
             o.id
         }

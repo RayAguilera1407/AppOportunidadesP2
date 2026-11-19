@@ -147,35 +147,30 @@ fun OrganizacionesScreen(alVolver: () -> Unit, alAbrir: (Long) -> Unit) {
             title = { Text("Nueva organización") },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Campo("Nombre", nombre, error = errores.nombre) { nombre = it }
+                    Campo("Nombre", nombre, error = errores.nombre) { nombre = it; vm.onNombreChange() }
                     CampoSelector(
-                        "Tipo de organización",
-                        TIPOS_ORGANIZACION,
-                        tipo.ifBlank { null },
-                        { it },
+                        "Tipo de organización", TIPOS_ORGANIZACION, tipo.ifBlank { null }, { it },
                         error = errores.tipo
-                    ) { tipo = it }
-                    Campo("Rubro", rubro) { rubro = it }
+                    ) { tipo = it; vm.onTipoChange() }
+                    Campo("Rubro", rubro, error = errores.rubro) { rubro = it; vm.onRubroChange() }
                     CampoSelector(
-                        "Región",
-                        REGIONES,
-                        region.ifBlank { null },
-                        { it },
+                        "Región", REGIONES, region.ifBlank { null }, { it },
                         error = errores.region
                     ) {
                         region = it
                         comuna = ""
+                        vm.onRegionChange()
                     }
                     CampoSelector(
-                        "Comuna",
-                        comunasDe(region),
-                        comuna.ifBlank { null },
-                        { it },
-                        error = errores.comuna,
-                        habilitado = region.isNotBlank()
-                    ) { comuna = it }
-                    Campo("Sitio web (ficticio o público)", sitioWeb) { sitioWeb = it }
-                    Campo("Observaciones", observaciones, unaLinea = false) { observaciones = it }
+                        "Comuna", comunasDe(region), comuna.ifBlank { null }, { it },
+                        error = errores.comuna, habilitado = region.isNotBlank()
+                    ) { comuna = it; vm.onComunaChange() }
+                    Campo("Sitio web (ficticio o público)", sitioWeb, error = errores.sitioWeb) {
+                        sitioWeb = it; vm.onSitioWebChange()
+                    }
+                    Campo("Observaciones", observaciones, unaLinea = false, error = errores.observaciones) {
+                        observaciones = it; vm.onObservacionesChange()
+                    }
                 }
             },
             confirmButton = {

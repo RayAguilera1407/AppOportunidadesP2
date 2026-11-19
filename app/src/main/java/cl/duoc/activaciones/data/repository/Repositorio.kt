@@ -42,7 +42,10 @@ class Repositorio(private val db: AppDatabase) {
     fun contactos(orgId: Long) = organizaciones.contactos(orgId)
     suspend fun guardarOrganizacion(o: Organizacion) = organizaciones.insertar(o)
     suspend fun guardarContacto(c: Contacto) = organizaciones.insertarContacto(c)
-    suspend fun eliminarContacto(id: Long) = organizaciones.eliminarContacto(id)
+    suspend fun eliminarContacto(id: Long) = db.withTransaction {
+        oportunidades.desvincularContacto(id)
+        organizaciones.eliminarContacto(id)
+    }
 
     /** Elimina la organización y sus contactos; sus oportunidades se conservan sin organización. */
     suspend fun eliminarOrganizacion(id: Long) = db.withTransaction {

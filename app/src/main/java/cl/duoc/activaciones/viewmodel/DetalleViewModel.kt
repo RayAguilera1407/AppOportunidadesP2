@@ -144,6 +144,51 @@ class DetalleViewModel(
                     fechaProximoSeguimiento = dias.toIntOrNull()?.let { ahora + it * DIA_MS }
                 )
             )
+            // NUEVO: la gestión hace avanzar el estado según el flujo del diagrama
+            estadoSugerido(tipo, o.estado)?.let { oportunidadRepo.cambiarEstado(o, it) }
+            alExito()
+        }
+    }
+
+    /** Flujo del diagrama: una gestión hace avanzar el estado de la oportunidad. */
+    private fun estadoSugerido(tipo: TipoAccion, actual: EstadoOportunidad): EstadoOportunidad? = when {
+        tipo == TipoAccion.ENVIO_PROPUESTA && actual in setOf(
+            EstadoOportunidad.EVENTO_IDENTIFICADO,
+            EstadoOportunidad.CONTACTO_PENDIENTE,
+            EstadoOportunidad.CONTACTO_REALIZADO
+        ) -> EstadoOportunidad.PROPUESTA_ENVIADA
+        tipo in setOf(TipoAccion.PRIMER_CONTACTO, TipoAccion.LLAMADA, TipoAccion.REUNION) && actual in setOf(
+            EstadoOportunidad.EVENTO_IDENTIFICADO,
+            EstadoOportunidad.CONTACTO_PENDIENTE
+        ) -> EstadoOportunidad.CONTACTO_REALIZADO
+        else -> null
+    }
+
+    fun guardarResultado(
+        asistentes: String, contactos: String, inscripciones: String,
+        evaluacion: String, observaciones: String, alExito: () -> Unit   // NUEVO: observaciones
+    ) {
+        val o = oportunidad.value ?: return
+        if (o.fechaCierre != null || o.estado != EstadoOportunidad.PARTICIPACION_CONFIRMADA) return
+        val err = ResultadoErrores(
+            asistentes = errorEntero(asistentes, obligatorio = true),
+            contactos = errorEntero(contactos),
+            inscripciones = errorEntero(inscripciones),
+            evaluacion = if (evaluacion.isBlank()) "Indica el impacto o la evaluación" else null
+        )
+        _erroresResultado.value = err
+        if (err.hayErrores) return
+        viewModelScope.launch {
+            oportunidadRepo.guardarResultado(
+                ResultadoActivacion(
+                    oportunidadId = id,
+                    asistentes = asistentes.toInt(),
+                    contactosObtenidos = contactos.toIntOrNull() ?: 0,
+                    inscripciones = inscripciones.toIntOrNull() ?: 0,
+                    evaluacion = evaluacion.trim(),
+                    observaciones = observaciones.trim()                  // NUEVO
+                )
+            )
             alExito()
         }
     }

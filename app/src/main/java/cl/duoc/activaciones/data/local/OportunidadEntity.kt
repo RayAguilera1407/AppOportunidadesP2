@@ -25,6 +25,7 @@ data class OportunidadEntity(
     val fechaCambioEstado: Long,
     val observaciones: String = "",
     val organizacionId: Long? = null,
+    val contactoId: Long? = null,
     val responsableId: Long,
     // Evento (opcional)
     val fechaInicio: Long? = null,
@@ -34,6 +35,7 @@ data class OportunidadEntity(
     val region: String = "",
     val publicoEsperado: Int = 0,
     val condiciones: String = "",
+    val espacio: String = "",
     val costo: Int = 0,
     // Recursos nativos
     val referenciaGeografica: String = "",

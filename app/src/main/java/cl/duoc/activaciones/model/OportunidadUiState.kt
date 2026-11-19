@@ -11,6 +11,8 @@ data class OportunidadUiState(
     val estado: EstadoOportunidad = EstadoOportunidad.EVENTO_IDENTIFICADO,
     val observaciones: String = "",
     val organizacionId: Long? = null,
+    val contactoId: Long? = null,
+
     val responsableId: Long? = null, // solo el supervisor puede reasignarlo
     // Evento (opcional)
     val fechaInicio: String = "",
@@ -20,6 +22,7 @@ data class OportunidadUiState(
     val region: String = "",
     val publico: String = "",
     val condiciones: String = "",
+    val espacio: String = "",
     val costo: String = "",
     // Recursos nativos
     val referenciaGeografica: String = "",

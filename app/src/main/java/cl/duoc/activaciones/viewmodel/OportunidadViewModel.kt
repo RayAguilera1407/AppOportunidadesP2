@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import cl.duoc.activaciones.data.local.OportunidadEntity
 import cl.duoc.activaciones.data.repository.OportunidadRepository
 import cl.duoc.activaciones.data.repository.Repositorio
+import cl.duoc.activaciones.model.Contacto
 import cl.duoc.activaciones.model.EstadoOportunidad
 import cl.duoc.activaciones.model.Filtro
 import cl.duoc.activaciones.model.OportunidadErrores
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -81,6 +83,15 @@ class OportunidadViewModel(
     private val _uiState = MutableStateFlow(OportunidadUiState())
     val uiState: StateFlow<OportunidadUiState> = _uiState.asStateFlow()
 
+    /** Contactos de la organización seleccionada en el formulario. */
+    val contactos: StateFlow<List<Contacto>> = _uiState
+        .map { it.organizacionId }
+        .distinctUntilChanged()
+        .flatMapLatest { orgId ->
+            if (orgId == null) flowOf(emptyList<Contacto>()) else repo.contactos(orgId)
+        }
+        .estado(viewModelScope, emptyList())
+
     private var original: OportunidadEntity? = null
     private var idCargado: Long? = null
 
@@ -111,12 +122,14 @@ class OportunidadViewModel(
                 referenciaGeografica = o.referenciaGeografica, fotoPath = o.fotoPath,
                 codigoQr = o.codigoQr,
                 documentoPath = o.documentoPath, documentoNombre = o.documentoNombre,
-                esEdicion = true
+                esEdicion = true,
+                contactoId = o.contactoId,
+                espacio = o.espacio
             )
         }
     }
 
-    // Cada cambio limpia el error de su campo
+    // Cada cambio limpia el error de su propio campo
     fun onNombre(v: String) = _uiState.update { it.copy(nombre = v, errores = it.errores.copy(nombre = null)) }
     fun onTipo(v: TipoEvento) = _uiState.update { it.copy(tipo = v, errores = it.errores.copy(tipo = null)) }
     fun onDescripcion(v: String) = _uiState.update { it.copy(descripcion = v, errores = it.errores.copy(descripcion = null)) }
@@ -124,21 +137,34 @@ class OportunidadViewModel(
     fun onPrioridad(v: Prioridad) = _uiState.update { it.copy(prioridad = v, errores = it.errores.copy(prioridad = null)) }
     fun onPotencial(v: Potencial) = _uiState.update { it.copy(potencial = v, errores = it.errores.copy(potencial = null)) }
     fun onEstado(v: EstadoOportunidad) = _uiState.update { it.copy(estado = v) }
-    fun onObservaciones(v: String) = _uiState.update { it.copy(observaciones = v) }
-    fun onOrganizacion(v: Long?) = _uiState.update { it.copy(organizacionId = v) }
-    fun onResponsable(v: Long) = _uiState.update { it.copy(responsableId = v) }
-    fun onFechaInicio(v: String) = _uiState.update { it.copy(fechaInicio = v, errores = it.errores.copy(fecha = null)) }
-    fun onFechaTermino(v: String) = _uiState.update { it.copy(fechaTermino = v, errores = it.errores.copy(fecha = null)) }
-    fun onHorario(v: String) = _uiState.update { it.copy(horario = v) }
+    fun onObservaciones(v: String) = _uiState.update { it.copy(observaciones = v, errores = it.errores.copy(observaciones = null)) }
+
+    // Si cambia la organización, el contacto anterior ya no es válido
+    fun onOrganizacion(v: Long?) = _uiState.update {
+        if (it.organizacionId == v) it
+        else it.copy(
+            organizacionId = v, contactoId = null,
+            errores = it.errores.copy(organizacion = null, contacto = null)
+        )
+    }
+    fun onContacto(v: Long?) = _uiState.update { it.copy(contactoId = v, errores = it.errores.copy(contacto = null)) }
+    fun onEspacio(v: String) = _uiState.update { it.copy(espacio = v, errores = it.errores.copy(espacio = null)) }
+    fun onResponsable(v: Long) = _uiState.update { it.copy(responsableId = v, errores = it.errores.copy(responsable = null)) }
+    fun onFechaInicio(v: String) = _uiState.update {
+        it.copy(fechaInicio = v, errores = it.errores.copy(fechaInicio = null, fechaTermino = null))
+    }
+    fun onFechaTermino(v: String) = _uiState.update { it.copy(fechaTermino = v, errores = it.errores.copy(fechaTermino = null)) }
+    fun onHorario(v: String) = _uiState.update { it.copy(horario = v, errores = it.errores.copy(horario = null)) }
 
     // Si cambia la región, la comuna anterior ya no es válida
     fun onRegion(v: String) = _uiState.update {
-        if (it.region == v) it else it.copy(region = v, comuna = "", errores = it.errores.copy(comuna = null))
+        if (it.region == v) it
+        else it.copy(region = v, comuna = "", errores = it.errores.copy(region = null, comuna = null))
     }
     fun onComuna(v: String) = _uiState.update { it.copy(comuna = v, errores = it.errores.copy(comuna = null)) }
 
     fun onPublico(v: String) = _uiState.update { it.copy(publico = v, errores = it.errores.copy(publico = null)) }
-    fun onCondiciones(v: String) = _uiState.update { it.copy(condiciones = v) }
+    fun onCondiciones(v: String) = _uiState.update { it.copy(condiciones = v, errores = it.errores.copy(condiciones = null)) }
     fun onCosto(v: String) = _uiState.update { it.copy(costo = v, errores = it.errores.copy(costo = null)) }
 
     fun onUbicacion(latitud: Double?, longitud: Double?) = _uiState.update {
@@ -164,9 +190,9 @@ class OportunidadViewModel(
 
     fun onMensajeRecurso(mensaje: String) = _uiState.update { it.copy(mensajeRecurso = mensaje) }
 
-    /** Campo numérico opcional: vacío es válido; si tiene texto debe ser un entero >= 0. */
-    private fun errorEnteroPositivo(texto: String): String? = when {
-        texto.isBlank() -> null
+    /** Campo numérico obligatorio: debe ser un entero >= 0. */
+    private fun errorEntero(texto: String, campo: String): String? = when {
+        texto.isBlank() -> "$campo es obligatorio"
         texto.toIntOrNull()?.let { it >= 0 } != true -> "Debe ser un número entero positivo"
         else -> null
     }
@@ -175,8 +201,13 @@ class OportunidadViewModel(
     fun guardar() {
         val s = _uiState.value
         if (s.guardando) return
+
         val inicio = if (s.fechaInicio.isBlank()) null else parsearFecha(s.fechaInicio)
-        val termino = if (s.fechaTermino.isBlank()) inicio else parsearFecha(s.fechaTermino)
+        val termino = if (s.fechaTermino.isBlank()) null else parsearFecha(s.fechaTermino)
+
+        val esSupervisorActual = usuario.value?.perfil == Perfil.SUPERVISOR
+        // Solo se exige contacto si la organización elegida tiene contactos
+        val requiereContacto = s.organizacionId != null && contactos.value.isNotEmpty()
 
         val errores = OportunidadErrores(
             nombre = when {
@@ -189,15 +220,28 @@ class OportunidadViewModel(
             fuente = if (s.fuente.isBlank()) "Indica la fuente de información" else null,
             prioridad = if (s.prioridad == null) "Selecciona la prioridad" else null,
             potencial = if (s.potencial == null) "Selecciona el potencial comercial" else null,
-            fecha = when {
-                s.fechaInicio.isNotBlank() && inicio == null -> "Fecha de inicio inválida (dd/MM/aaaa)"
-                s.fechaTermino.isNotBlank() && termino == null -> "Fecha de término inválida (dd/MM/aaaa)"
-                inicio != null && termino != null && termino < inicio -> "El término no puede ser anterior al inicio"
+            observaciones = if (s.observaciones.isBlank()) "Las observaciones son obligatorias" else null,
+            organizacion = if (s.organizacionId == null) "Selecciona la organización" else null,
+            contacto = if (requiereContacto && s.contactoId == null) "Selecciona el contacto" else null,
+            responsable = if (esSupervisorActual && s.responsableId == null) "Selecciona el responsable" else null,
+            fechaInicio = when {
+                s.fechaInicio.isBlank() -> "La fecha de inicio es obligatoria"
+                inicio == null -> "Fecha inválida (dd/MM/aaaa)"
                 else -> null
             },
-            publico = errorEnteroPositivo(s.publico),
-            costo = errorEnteroPositivo(s.costo),
-            comuna = if (s.region.isNotBlank() && s.comuna.isBlank()) "Selecciona la comuna" else null
+            fechaTermino = when {
+                s.fechaTermino.isBlank() -> "La fecha de término es obligatoria"
+                termino == null -> "Fecha inválida (dd/MM/aaaa)"
+                inicio != null && termino < inicio -> "El término no puede ser anterior al inicio"
+                else -> null
+            },
+            horario = if (s.horario.isBlank()) "El horario es obligatorio" else null,
+            region = if (s.region.isBlank()) "Selecciona la región" else null,
+            comuna = if (s.region.isNotBlank() && s.comuna.isBlank()) "Selecciona la comuna" else null,
+            publico = errorEntero(s.publico, "El público esperado"),
+            espacio = if (s.espacio.isBlank()) "El espacio o stand es obligatorio" else null,
+            condiciones = if (s.condiciones.isBlank()) "Las condiciones son obligatorias" else null,
+            costo = errorEntero(s.costo, "El costo")
         )
         _uiState.update { it.copy(errores = errores) }
         if (errores.hayErrores) return
@@ -231,6 +275,7 @@ class OportunidadViewModel(
                 fechaCambioEstado = if (base == null || base.estado != s.estado) ahora else base.fechaCambioEstado,
                 observaciones = s.observaciones.trim(),
                 organizacionId = s.organizacionId,
+                contactoId = if (s.organizacionId != null) s.contactoId else null,
                 responsableId = responsable,
                 fechaInicio = inicio,
                 fechaTermino = termino,
@@ -239,6 +284,7 @@ class OportunidadViewModel(
                 region = s.region.trim(),
                 publicoEsperado = s.publico.toIntOrNull() ?: 0,
                 condiciones = s.condiciones.trim(),
+                espacio = s.espacio.trim(),
                 costo = s.costo.toIntOrNull() ?: 0,
                 referenciaGeografica = s.referenciaGeografica,
                 fotoPath = s.fotoPath,

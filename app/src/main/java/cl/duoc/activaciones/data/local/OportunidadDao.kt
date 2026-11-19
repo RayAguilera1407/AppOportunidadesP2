@@ -12,9 +12,15 @@ interface OportunidadDao {
     @Update suspend fun actualizar(o: OportunidadEntity)
     @Query("DELETE FROM oportunidad WHERE id = :id") suspend fun eliminar(id: Long)
 
+    /** Al eliminar un contacto, sus oportunidades quedan sin contacto asignado. */
+    @Query("UPDATE oportunidad SET contactoId = NULL WHERE contactoId = :contactoId")
+    suspend fun desvincularContacto(contactoId: Long)
+
     /** Al eliminar una organización, sus oportunidades quedan sin organización asignada. */
     @Query("UPDATE oportunidad SET organizacionId = NULL WHERE organizacionId = :orgId")
     suspend fun desvincularOrganizacion(orgId: Long)
+
+
 
     /** Flow: Room emite de nuevo cada vez que la tabla cambia, así la lista se actualiza sola. */
     @Query("SELECT * FROM oportunidad ORDER BY fechaDeteccion DESC, id DESC")

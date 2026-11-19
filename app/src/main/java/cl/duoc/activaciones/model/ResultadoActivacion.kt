@@ -9,5 +9,6 @@ data class ResultadoActivacion(
     val asistentes: Int,
     val contactosObtenidos: Int,
     val inscripciones: Int,
-    val evaluacion: String
+    val evaluacion: String,
+    val observaciones: String = ""
 )

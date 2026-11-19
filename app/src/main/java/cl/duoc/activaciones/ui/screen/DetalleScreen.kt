@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -115,6 +117,7 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                     Dato("Lugar", listOf(o.comuna, o.region).filter { it.isNotBlank() }.joinToString(", ").ifEmpty { "Por definir" })
                     Dato("Público esperado", o.publicoEsperado.toString())
                     Dato("Condiciones", o.condiciones)
+                    if (o.espacio.isNotBlank()) Dato("Espacio", o.espacio)
                     Dato("Costo", "$${o.costo}")
                 }
             }
@@ -134,6 +137,9 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                 Seccion("Organización y contactos") {
                     if (organizacion == null) Dato("Organización", "Sin asignar")
                     organizacion?.let { Dato(it.nombre, "${it.tipo} · ${it.rubro}") }
+                    contactos.firstOrNull { it.id == o.contactoId }?.let {
+                        Dato("Contacto de la oportunidad", "${it.nombre} · ${it.cargo}")
+                    }
                     contactos.forEach { c -> Dato(c.nombre, "${c.cargo} (${c.area}) · ${c.correo} · ${c.telefono}") }
                 }
             }
@@ -203,6 +209,7 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                         Dato("Contactos obtenidos", r.contactosObtenidos.toString())
                         Dato("Inscripciones", r.inscripciones.toString())
                         Dato("Evaluación", r.evaluacion)
+                        if (r.observaciones.isNotBlank()) Dato("Observaciones", r.observaciones)
                     }
                 }
             }
@@ -286,8 +293,8 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
             actual = resultado,
             errores = errResultado,
             alCerrar = { dialogoResultado = false }
-        ) { asistentes, contactosObt, inscripciones, evaluacion ->
-            vm.guardarResultado(asistentes, contactosObt, inscripciones, evaluacion) {
+        ) { asistentes, contactosObt, inscripciones, evaluacion, observaciones ->
+            vm.guardarResultado(asistentes, contactosObt, inscripciones, evaluacion, observaciones) {
                 dialogoResultado = false
             }
         }
@@ -346,28 +353,30 @@ private fun DialogoResultado(
     actual: ResultadoActivacion?,
     errores: ResultadoErrores,
     alCerrar: () -> Unit,
-    alGuardar: (String, String, String, String) -> Unit
+    alGuardar: (String, String, String, String, String) -> Unit
 ) {
     var asistentes by remember { mutableStateOf(actual?.asistentes?.toString() ?: "") }
     var contactos by remember { mutableStateOf(actual?.contactosObtenidos?.toString() ?: "") }
     var inscripciones by remember { mutableStateOf(actual?.inscripciones?.toString() ?: "") }
     var evaluacion by remember { mutableStateOf(actual?.evaluacion ?: "") }
+    var observaciones by remember { mutableStateOf(actual?.observaciones ?: "") }
 
     AlertDialog(
         onDismissRequest = alCerrar,
         title = { Text("Resultado de la activación") },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Campo("Asistentes", asistentes, error = errores.asistentes, numerico = true) { asistentes = it }
                 Campo("Contactos obtenidos", contactos, error = errores.contactos, numerico = true) { contactos = it }
                 Campo("Inscripciones", inscripciones, error = errores.inscripciones, numerico = true) { inscripciones = it }
-                Campo("Evaluación", evaluacion, error = errores.evaluacion, unaLinea = false) { evaluacion = it }
+                Campo("Impacto o evaluación", evaluacion, error = errores.evaluacion, unaLinea = false) { evaluacion = it }
+                Campo("Observaciones", observaciones, unaLinea = false) { observaciones = it }
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = { alGuardar(asistentes, contactos, inscripciones, evaluacion) }
-            ) { Text("Guardar") }
+            TextButton(onClick = { alGuardar(asistentes, contactos, inscripciones, evaluacion, observaciones) }) {
+                Text("Guardar")
+            }
         },
         dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } }
     )
