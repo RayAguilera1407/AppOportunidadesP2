@@ -35,20 +35,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.activaciones.model.EstadoOportunidad
+import cl.duoc.activaciones.model.Prioridad
 import cl.duoc.activaciones.model.ResultadoActivacion
+import cl.duoc.activaciones.model.ResultadoErrores
 import cl.duoc.activaciones.model.Seguimiento
+import cl.duoc.activaciones.model.SeguimientoErrores
 import cl.duoc.activaciones.model.TipoAccion
-import cl.duoc.activaciones.model.DIA_MS
-import cl.duoc.activaciones.viewmodel.DetalleViewModel
 import cl.duoc.activaciones.ui.components.Campo
 import cl.duoc.activaciones.ui.components.ConfirmarEliminacion
 import cl.duoc.activaciones.ui.components.EstadoChip
 import cl.duoc.activaciones.ui.components.Selector
-import cl.duoc.activaciones.ui.theme.barraColores
 import cl.duoc.activaciones.ui.components.app
 import cl.duoc.activaciones.ui.components.vmFactory
+import cl.duoc.activaciones.ui.theme.barraColores
 import cl.duoc.activaciones.util.aFecha
 import cl.duoc.activaciones.util.aFechaHora
+import cl.duoc.activaciones.viewmodel.DetalleViewModel
 
 @Composable
 fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
@@ -59,6 +61,11 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
     val contactos by vm.contactos.collectAsState()
     val historial by vm.historial.collectAsState()
     val resultado by vm.resultado.collectAsState()
+    val puedeCerrar by vm.puedeCerrar.collectAsState()
+    val esSupervisor by vm.esSupervisor.collectAsState()
+    val ejecutivos by vm.ejecutivos.collectAsState()
+    val errSeguimiento by vm.erroresSeguimiento.collectAsState()
+    val errResultado by vm.erroresResultado.collectAsState()
     var dialogoSeguimiento by remember { mutableStateOf(false) }
     var dialogoResultado by remember { mutableStateOf(false) }
     var confirmarEliminar by remember { mutableStateOf(false) }
@@ -111,7 +118,6 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                     Dato("Costo", "$${o.costo}")
                 }
             }
-            // La sección aparece si hay ubicación, foto, QR o documento guardado
             if (o.referenciaGeografica.isNotBlank() || o.fotoPath != null ||
                 o.codigoQr.isNotBlank() || o.documentoPath != null
             ) {
@@ -136,18 +142,40 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
                     Selector("Estado", EstadoOportunidad.values().toList(), o.estado, { it.etiqueta }) { vm.cambiarEstado(it) }
                 }
             }
+            if (esSupervisor) {
+                item {
+                    Seccion("Supervisión") {
+                        Selector("Prioridad", Prioridad.values().toList(), o.prioridad, { it.etiqueta }) { vm.cambiarPrioridad(it) }
+                        Selector(
+                            "Responsable",
+                            ejecutivos.map { it.id },
+                            o.responsableId ?: -1L,
+                            { execId -> ejecutivos.firstOrNull { it.id == execId }?.nombre ?: "Sin asignar" }
+                        ) { vm.reasignar(it) }
+                    }
+                }
+            }
             item {
                 val cerrada = o.fechaCierre != null
-                // Se puede cerrar si fue descartada, o si confirmó participación y ya tiene resultado
-                val puedeCerrar = o.estado == EstadoOportunidad.DESCARTADA ||
-                        (o.estado == EstadoOportunidad.PARTICIPACION_CONFIRMADA && resultado != null)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { dialogoSeguimiento = true }, enabled = !cerrada) {
+                        Button(
+                            onClick = {
+                                vm.limpiarErrores()
+                                dialogoSeguimiento = true
+                            },
+                            enabled = !cerrada
+                        ) {
                             Text("Registrar seguimiento")
                         }
                         if (o.estado == EstadoOportunidad.PARTICIPACION_CONFIRMADA) {
-                            OutlinedButton(onClick = { dialogoResultado = true }, enabled = !cerrada) {
+                            OutlinedButton(
+                                onClick = {
+                                    vm.limpiarErrores()
+                                    dialogoResultado = true
+                                },
+                                enabled = !cerrada
+                            ) {
                                 Text("Resultado")
                             }
                         }
@@ -244,10 +272,25 @@ fun DetalleScreen(id: Long, alVolver: () -> Unit, alEditar: (Long) -> Unit) {
         )
     }
     if (dialogoSeguimiento) {
-        DialogoSeguimiento(alCerrar = { dialogoSeguimiento = false }) { vm.agregarSeguimiento(it) }
+        DialogoSeguimiento(
+            errores = errSeguimiento,
+            alCerrar = { dialogoSeguimiento = false }
+        ) { tipo, resultadoSeg, proxima, dias ->
+            vm.agregarSeguimiento(tipo, resultadoSeg, proxima, dias) {
+                dialogoSeguimiento = false
+            }
+        }
     }
     if (dialogoResultado) {
-        DialogoResultado(resultado, alCerrar = { dialogoResultado = false }) { vm.guardarResultado(it) }
+        DialogoResultado(
+            actual = resultado,
+            errores = errResultado,
+            alCerrar = { dialogoResultado = false }
+        ) { asistentes, contactosObt, inscripciones, evaluacion ->
+            vm.guardarResultado(asistentes, contactosObt, inscripciones, evaluacion) {
+                dialogoResultado = false
+            }
+        }
     }
 }
 
@@ -267,7 +310,11 @@ private fun Dato(etiqueta: String, valor: String) {
 }
 
 @Composable
-private fun DialogoSeguimiento(alCerrar: () -> Unit, alGuardar: (Seguimiento) -> Unit) {
+private fun DialogoSeguimiento(
+    errores: SeguimientoErrores,
+    alCerrar: () -> Unit,
+    alGuardar: (TipoAccion, String, String, String) -> Unit
+) {
     val tipos = TipoAccion.values().filter { it != TipoAccion.CAMBIO_ESTADO && it != TipoAccion.CIERRE }
     var tipo by remember { mutableStateOf(TipoAccion.LLAMADA) }
     var resultado by remember { mutableStateOf("") }
@@ -280,25 +327,14 @@ private fun DialogoSeguimiento(alCerrar: () -> Unit, alGuardar: (Seguimiento) ->
         text = {
             Column {
                 Selector("Acción", tipos, tipo, { it.etiqueta }) { tipo = it }
-                Campo("Resultado", resultado, unaLinea = false) { resultado = it }
+                Campo("Resultado", resultado, error = errores.resultado, unaLinea = false) { resultado = it }
                 Campo("Próxima acción", proxima) { proxima = it }
-                Campo("Próximo seguimiento en (días)", dias, numerico = true) { dias = it }
+                Campo("Próximo seguimiento en (días)", dias, error = errores.dias, numerico = true) { dias = it }
             }
         },
         confirmButton = {
             TextButton(
-                enabled = resultado.isNotBlank(),
-                onClick = {
-                    val ahora = System.currentTimeMillis()
-                    alGuardar(
-                        Seguimiento(
-                            oportunidadId = 0, tipoAccion = tipo, fechaHora = ahora, resultado = resultado.trim(),
-                            proximaAccion = proxima.trim(),
-                            fechaProximoSeguimiento = dias.toIntOrNull()?.let { ahora + it * DIA_MS }
-                        )
-                    )
-                    alCerrar()
-                }
+                onClick = { alGuardar(tipo, resultado, proxima, dias) }
             ) { Text("Guardar") }
         },
         dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } }
@@ -306,7 +342,12 @@ private fun DialogoSeguimiento(alCerrar: () -> Unit, alGuardar: (Seguimiento) ->
 }
 
 @Composable
-private fun DialogoResultado(actual: ResultadoActivacion?, alCerrar: () -> Unit, alGuardar: (ResultadoActivacion) -> Unit) {
+private fun DialogoResultado(
+    actual: ResultadoActivacion?,
+    errores: ResultadoErrores,
+    alCerrar: () -> Unit,
+    alGuardar: (String, String, String, String) -> Unit
+) {
     var asistentes by remember { mutableStateOf(actual?.asistentes?.toString() ?: "") }
     var contactos by remember { mutableStateOf(actual?.contactosObtenidos?.toString() ?: "") }
     var inscripciones by remember { mutableStateOf(actual?.inscripciones?.toString() ?: "") }
@@ -317,23 +358,16 @@ private fun DialogoResultado(actual: ResultadoActivacion?, alCerrar: () -> Unit,
         title = { Text("Resultado de la activación") },
         text = {
             Column {
-                Campo("Asistentes", asistentes, numerico = true) { asistentes = it }
-                Campo("Contactos obtenidos", contactos, numerico = true) { contactos = it }
-                Campo("Inscripciones", inscripciones, numerico = true) { inscripciones = it }
-                Campo("Evaluación", evaluacion, unaLinea = false) { evaluacion = it }
+                Campo("Asistentes", asistentes, error = errores.asistentes, numerico = true) { asistentes = it }
+                Campo("Contactos obtenidos", contactos, error = errores.contactos, numerico = true) { contactos = it }
+                Campo("Inscripciones", inscripciones, error = errores.inscripciones, numerico = true) { inscripciones = it }
+                Campo("Evaluación", evaluacion, error = errores.evaluacion, unaLinea = false) { evaluacion = it }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                alGuardar(
-                    ResultadoActivacion(
-                        oportunidadId = 0, asistentes = asistentes.toIntOrNull() ?: 0,
-                        contactosObtenidos = contactos.toIntOrNull() ?: 0,
-                        inscripciones = inscripciones.toIntOrNull() ?: 0, evaluacion = evaluacion.trim()
-                    )
-                )
-                alCerrar()
-            }) { Text("Guardar") }
+            TextButton(
+                onClick = { alGuardar(asistentes, contactos, inscripciones, evaluacion) }
+            ) { Text("Guardar") }
         },
         dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } }
     )

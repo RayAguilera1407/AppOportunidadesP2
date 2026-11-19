@@ -1,7 +1,7 @@
 package cl.duoc.activaciones
 
 import cl.duoc.activaciones.model.UsuarioUiState
-import cl.duoc.activaciones.model.validarRegistro
+import cl.duoc.activaciones.viewmodel.validarRegistro
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
