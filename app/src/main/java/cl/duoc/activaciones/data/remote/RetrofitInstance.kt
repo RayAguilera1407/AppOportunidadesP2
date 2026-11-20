@@ -23,4 +23,19 @@ object RetrofitInstance {
             .build()
             .create(EventosApi::class.java)
     }
+
+    /**
+     * Base de datos externa: API PHP en XAMPP sobre MySQL (tabla eventos_catalogo).
+     * 10.0.2.2 es el "localhost" del PC visto desde el emulador.
+     * En un celular físico, cambia por la IP del PC en la red Wi-Fi (por ejemplo 192.168.1.10).
+     */
+    const val URL_XAMPP = "http://10.0.2.2/activaciones_api/"
+
+    val catalogoApi: EventosCatalogoApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(URL_XAMPP)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(EventosCatalogoApi::class.java)
+    }
 }

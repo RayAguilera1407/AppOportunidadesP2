@@ -9,3 +9,9 @@ captures/
 .cxx/
 *.apk
 *.aab
+
+# Archivos de apoyo locales
+_revision/
+tests_log.txt
+*.bat
+!gradlew.bat

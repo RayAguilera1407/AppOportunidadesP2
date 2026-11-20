@@ -1,55 +1,91 @@
 package cl.duoc.activaciones
 
-import cl.duoc.activaciones.model.UsuarioUiState
-import cl.duoc.activaciones.viewmodel.validarRegistro
-import org.junit.Assert.assertEquals
+import cl.duoc.activaciones.data.repository.Repositorio
+import cl.duoc.activaciones.viewmodel.UsuarioViewModel
+import io.mockk.mockk
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Validaciones del formulario de registro (Guía 11). */
+/**
+ * Validaciones del formulario de registro (Guía 11).
+ * Las reglas viven en UsuarioViewModel.validarFormulario(): devuelve true si no hay errores
+ * y deja los mensajes en estado.value.errores.
+ */
 class ValidacionesTest {
 
-    private val valido = UsuarioUiState(
-        nombre = "Camila Rojas",
-        correo = "camila@demo.cl",
-        clave = "clave123",
-        confirmarClave = "clave123",
-        direccion = "Av. Ficticia 123",
-        area = "Comercial",
-        zona = "Metropolitana",
-        aceptaTerminos = true
-    )
+    // El repositorio no se usa al validar; se simula para no depender de Room
+    private fun vmValido() = UsuarioViewModel(mockk<Repositorio>(relaxed = true)).apply {
+        onNombreChange("Camila Rojas")
+        onCorreoChange("camila@demo.cl")
+        onClaveChange("clave123")
+        onConfirmarClaveChange("clave123")
+        onDireccionChange("Av. Ficticia 123")
+        onAreaChange("Comercial")
+        onZonaChange("Metropolitana")
+        onAceptarTerminosChange(true)
+    }
 
     @Test
     fun `formulario completo no tiene errores`() {
-        assertFalse(validarRegistro(valido).hayErrores)
+        val vm = vmValido()
+        assertTrue(vm.validarFormulario())
+        assertFalse(vm.estado.value.errores.hayErrores)
     }
 
     @Test
     fun `formulario vacio marca todos los campos`() {
-        val e = validarRegistro(UsuarioUiState())
+        val vm = UsuarioViewModel(mockk<Repositorio>(relaxed = true))
+        assertFalse(vm.validarFormulario())
+        val e = vm.estado.value.errores
         assertTrue(e.hayErrores)
         assertNotNull(e.nombre)
         assertNotNull(e.correo)
         assertNotNull(e.clave)
         assertNotNull(e.direccion)
+        assertNotNull(e.area)
+        assertNotNull(e.zona)
         assertNotNull(e.terminos)
     }
 
     @Test
     fun `correo sin dominio es invalido`() {
-        assertNotNull(validarRegistro(valido.copy(correo = "camila@")).correo)
+        val vm = vmValido().apply { onCorreoChange("camila@") }
+        assertFalse(vm.validarFormulario())
+        assertNotNull(vm.estado.value.errores.correo)
     }
 
     @Test
     fun `claves distintas no coinciden`() {
-        assertEquals("Las contraseñas no coinciden", validarRegistro(valido.copy(confirmarClave = "otra123")).confirmarClave)
+        val vm = vmValido().apply { onConfirmarClaveChange("otra123") }
+        assertFalse(vm.validarFormulario())
+        assertNotNull(vm.estado.value.errores.confirmarClave)
     }
 
     @Test
     fun `clave sin numeros es rechazada`() {
-        assertNotNull(validarRegistro(valido.copy(clave = "abcdefg", confirmarClave = "abcdefg")).clave)
+        val vm = vmValido().apply {
+            onClaveChange("abcdefg")
+            onConfirmarClaveChange("abcdefg")
+        }
+        assertFalse(vm.validarFormulario())
+        assertNotNull(vm.estado.value.errores.clave)
+    }
+
+    @Test
+    fun `nombre con numeros es rechazado`() {
+        val vm = vmValido().apply { onNombreChange("Camila 2") }
+        assertFalse(vm.validarFormulario())
+        assertNotNull(vm.estado.value.errores.nombre)
+    }
+
+    @Test
+    fun `corregir un campo limpia su error`() {
+        val vm = vmValido().apply { onCorreoChange("camila@") }
+        vm.validarFormulario()
+        vm.onCorreoChange("camila@demo.cl")
+        assertNull(vm.estado.value.errores.correo)
     }
 }
