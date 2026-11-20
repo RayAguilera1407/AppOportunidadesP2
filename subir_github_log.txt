@@ -1,4 +1,5 @@
-==== 20-11-2026  0:52:43,85 ==== 
-From https://github.com/RayAguilera1407/AppOportunidadesP2
- * branch            main       -> FETCH_HEAD
- * [new branch]      main       -> origin/main
+==== 20-11-2026  0:52:57,48 ==== 
+C:\xampp\htdocs\activaciones_api\activaciones_db.sql
+C:\xampp\htdocs\activaciones_api\config.php
+C:\xampp\htdocs\activaciones_api\eventos.php
+        3 archivo(s) copiado(s).
